@@ -1,5 +1,7 @@
-# `etcd` native
+# 1. `etcd` native
 Let's run `etcd` and play with it outside CoreOS. Note: we're talking only on `etcd 2.x` here; make no confusion with `etcd 0.4.x`.
+
+For this part, please `cd` into the directory named `demo/1.etcd_native`
 
 ## run `etcd` locally in static mode
 Resource: [CoreOS Clustering in etcd docs](https://coreos.com/etcd/docs/latest/clustering.html)
@@ -237,16 +239,29 @@ In a few minutes, we will launch CoreOS. `etcd` will be launched automatically b
 
 
 
-# CoreOS
+# 2. CoreOS
+You can `cd` out to the repo root.
 
-Boot the 3 instances
+## Get a new `etcd` cluster id
+
+We need to prepare a new `etcd` cluster id before we boot the machines:
+
+    $ http https://discovery.etcd.io/new\?size\=3
+    https://discovery.etcd.io/813b7818ebd757986ec5d5e452714b95
+
+Please copy the `user-data.sample` to `user-data` and add the following line where indicated in it
+
+    discovery: https://discovery.etcd.io/813b7818ebd757986ec5d5e452714b95
+
+and finally boot the 3 instances
 
     vagrant up
 
+then for the rest of this part `cd` to `demo/2.coreos_fleet`
 
 ## Prepare terminal, add files
 
-from the host, set TERM
+In order to have a well behaved terminal inside coreos, from the host, set the `TERM` as follows:
 
     the_key=~/.vagrant.d/insecure_private_key
     for port in 2222 2200 2201;
@@ -254,10 +269,9 @@ from the host, set TERM
         infocmp | ssh -T -p $port -i $the_key core@localhost 'cat > "$TERM.info" && tic "$TERM.info"'
     done
 
+The ports are the ones given by vagrant/virtualbox to each host's ssh server, so that we can ssh into them.
 
-
-
-# CoreOS Tour
+## CoreOS Tour
 
 How to install my app, where is the package manager? Stop. By design, CoreOS is designed to be mnml lnx (thanks Brian), and run containers, have nice networking stack (flannel), nice orchestration (systemd + fleet), docker or rkt for managing containers. So nothing prevents you from installing from source or installing binaries, but there is no package manager.
 
@@ -265,8 +279,7 @@ In the best demos I've seen, the [aim was to not log in](https://www.youtube.com
 
 Where are the configuration files? The `systemd` config files are located as usual in `/run/systemd/system` and `/etc/systemd/system`
 
-The guys at CoreOS use `cloud-init`. The config files are
-
+The guys at CoreOS use `cloud-init`. The config files are in `/usr/share/oem/cloud-config.yml`, and there are good docs that explain the [`cloud-init` mechanism and config files for CoreOS](https://coreos.com/os/docs/latest/cloud-config.html).
 
 
 Ping each other
@@ -297,7 +310,7 @@ CoreOS can be installed to and booted from disk. We will do this here using the 
 CoreOS can also be booted on diskless machines, via [iPXE](https://coreos.com/os/docs/latest/booting-with-ipxe.html). Kelsey Hightower has it all explained on [coreos-ipxe-server](https://github.com/kelseyhightower/coreos-ipxe-server/blob/master/docs/getting_started.md).
 
 
-# Playing with fleet
+## Playing with fleet
 
 This is based on the [CoreOS tutorial](https://www.digitalocean.com/community/tutorials/an-introduction-to-coreos-system-components) from Digital Ocean.
 
@@ -760,7 +773,7 @@ Destroy all units and start over in a more flexible manner at runtime.
     Destroyed nginx-discovery@7777.service
     Destroyed nginx@7777.service
 
-We can submit only the units templates and load/start instanciated units
+We can submit only the units templates and load/start an instanciated unit on any port we want (I'll pick `4444`):
 
     $ fleetctl submit unit-files/templates/*
     $ fleetctl start nginx@4444.service nginx-discovery@4444.service
@@ -776,5 +789,23 @@ And we'll see that unit popping out somewhere in the cluster (if the watch is st
     {"host": "core-01", "ipv4_addr": 172.17.8.101, "port": 4444}
 
 Good!
+
+## One last thing
+
+We can also use `fleet` to log into a worker
+
+    fleetctl ssh 605c0ca8
+
+or
+
+    fleetctl ssh nginx@6666.service
+
+in order to log in the worker that runs that service.
+
+We can also do that from outside CoreOS, but this requires doing some ssh configuration. Due to lack of time, I engage the reader to read the [nice docs on that subject](https://coreos.com/fleet/docs/latest/using-the-client.html#ssh-dynamically-to-host).
+
+# 3. Runtime cluster reconfiguration
+
+For this part, please `cd` to `demo/3.coreos_dynamic`.
 
 
