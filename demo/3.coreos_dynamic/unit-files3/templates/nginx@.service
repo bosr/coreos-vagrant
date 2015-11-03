@@ -1,0 +1,37 @@
+[Unit]
+Description=nginx web server service on port %i
+
+# Requirements
+Requires=etcd2.service
+Requires=docker.service
+Requires=nginx-discovery@%i.service
+
+# Dependency ordering
+After=etcd2.service
+After=docker.service
+Before=nginx-discovery@%i.service
+
+[Service]
+# Let processes take awhile to start up (for first run Docker containers)
+TimeoutStartSec=0
+
+# Change killmode from "control-group" to "none" to let Docker remove
+# work correctly.
+KillMode=none
+
+# Get CoreOS environmental variables
+EnvironmentFile=/etc/environment
+
+# Pre-start and Start
+## Directives with "=-" are allowed to fail without consequence
+ExecStartPre=-/usr/bin/docker kill nginx.%i
+ExecStartPre=-/usr/bin/docker rm nginx.%i
+ExecStartPre=/usr/bin/docker pull nginx
+ExecStart=/usr/bin/docker run --name nginx.%i -p ${COREOS_PUBLIC_IPV4}:%i:80 nginx
+
+# Stop
+ExecStop=/usr/bin/docker stop nginx.%i
+
+[X-Fleet]
+# Don't schedule on the same machine as other nginx instances
+Conflicts=nginx@*.service

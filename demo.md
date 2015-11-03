@@ -808,4 +808,36 @@ We can also do that from outside CoreOS, but this requires doing some ssh config
 
 For this part, please `cd` to `demo/3.coreos_dynamic`.
 
+This part of the demo is based on [How to use confd and etcd to dynamically reconfigure services in CoreOS](https://www.digitalocean.com/community/tutorials/how-to-use-confd-and-etcd-to-dynamically-reconfigure-services-in-coreos), the 7th part of [Digital Ocean's CoreOS tutorial series](https://www.digitalocean.com/community/tutorial_series/getting-started-with-coreos-2).
+
+I have already built the Docker image and named it `nginx-lb` on [my Docker Hub repository](), so we'll go fast and demonstrate a small architecture for serving web pages:
+
+- two `nginx` webservers that serve a webpage (a static one, but whatever).
+- one `nginx` service to load balance the requests
+
+The actual tutorial series uses `apache` webservers to serve the pages, but I took the liberty to change this with `nginx` so as to minimize the web payload during the demo.
+
+## copy the unit-files onto the fleet master
+
+The unit-files are in the `unit-files3` directory in `demo/3.coreos_dynamic`. Before we copy them onto the fleet master
+- we should destroy the units currently registered/running in `fleet`
+- delete the `unit-files` directory on the fleet master.
+
+When done,
+
+    tar -c unit-files3 | ssh -C -p 2222 -i $the_key core@localhost "tar -x"
+
+
+## unit-files
+### webservers template
+
+The webservers unit-files are **almost exactly** the same as before. They should have `{COREOS_PRIVATE_IPV4}` instead of `{COREOS_PUBLIC_IPV4}` in order to simulate a real scenario where the workers are not visible from the outside world, but we here have a flat network in Vagrant for this demo.
+
+### discovery service template
+
+The unit-files are **almost exactly** the same as before, but instead of passing a JSON object, we are setting a simple IP address + port combination. This way, we can read this value directly to find the connection information necessary to get to this service.
+
+### nginx-lb unit-file
+
+No more time sorry. TBContinued
 
